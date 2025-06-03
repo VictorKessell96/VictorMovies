@@ -1,0 +1,340 @@
+﻿@page "/movies"
+@using VictorMovies.Components.Domain
+@using VictorMovies.Components.Services
+@* Need to inject any services used as well *@
+@inject IMovieService MovieService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Genres</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudPaper Elevation="4" Class="pa-6 ma-4">
+        <MudGrid>
+            <MudItem xs="12" Class="d-flex justify-space-between align-center">
+                <MudText Typo="Typo.h3" Color="Color.Primary" Class="mb-4">Movies</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.MovieCreation"
+                           Size="Size.Large" Class="ml-auto" OnClick="OpenCreateDialog">
+                    New Movie
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" Class="mb-4">
+                <MudPaper Elevation="1" Class="pa-4">
+                    <MudGrid GutterSize="3">
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudTextField @bind-Value="nameSearchString"
+                                          Placeholder="Search movies by name..."
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                          Immediate="true"
+                                          DebounceInterval="300"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudTextField @bind-Value="releaseYearSearchInt"
+                                          Placeholder="Search by release year..."
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                          Immediate="true"
+                                          DebounceInterval="300"
+                                          Margin="Margin.Dense" 
+                                          Pattern="^\d*$" 
+                                          HelperText="Only numeric characters are allowed"
+                                          ErrorText="Invalid input: only digits (0–9) are allowed" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudTextField @bind-Value="ageRestrictedSearchString"
+                                          Placeholder="Search by age restriction..."
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                          Immediate="true"
+                                          DebounceInterval="300"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+
+                        <!-- Row 2 -->
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudTextField @bind-Value="ratingSearchInt"
+                                          Placeholder="Search by rating..."
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Search"
+                                          Immediate="true"
+                                          DebounceInterval="300"
+                                          Margin="Margin.Dense"
+                                          Pattern="^\d*$" 
+                                          HelperText="Only numeric characters are allowed"
+                                          ErrorText="Invalid input: only digits (0–9) are allowed" />
+                        </MudItem>
+                        <MudItem xs="0" sm="0" md="4">
+
+                        </MudItem>
+                        <MudItem xs="6" sm="3" md="2">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Icon="@Icons.Material.Filled.Clear"
+                                       OnClick="ClearSearch"
+                                       FullWidth="true">
+                                Clear
+                            </MudButton>
+                        </MudItem>
+                        <MudItem xs="6" sm="3" md="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.FilterList"
+                                       OnClick="ApplyFilters"
+                                       FullWidth="true">
+                                Apply Filters
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12">
+                @if (loading)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+                }
+                else if (movies.Count == 0)
+                {
+                    <MudItem xs="12" Class="d-flex justify-center">
+                        <MudPaper Class="pa-6 ma-4 text-center" Elevation="1" Style="min-width: 400px; max-width: 600px;">
+                            <MudStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6" Color="Color.Secondary">No movies found.</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudDataGrid T="Movie" Items="@movies" Loading="@loading" Hover="true" Dense="false"
+                                 Striped="false" Bordered="false" ReadOnly="true" Class="elevation-1">
+                        <ToolBarContent>
+                            <MudText Typo="Typo.h6" Class="mud-primary-text">Amount of Movies (@movies.Count)</MudText>
+                        </ToolBarContent>
+                        <Columns>
+                            <PropertyColumn Property="x => x.MovieName" Title="Movie Name">
+                                <CellTemplate>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudAvatar Color="Color.Secondary" Size="Size.Medium">
+                                            @(context.Item.MovieName[0])
+                                        </MudAvatar>
+                                        <MudText>@context.Item.MovieName</MudText>
+                                    </MudStack>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.YearReleased" Title="Year Released">
+                                <CellTemplate>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudText>@context.Item.YearReleased</MudText>
+                                    </MudStack>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.Rating" Title="Rating (/10)">
+                                <CellTemplate>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudText>@context.Item.Rating</MudText>
+                                    </MudStack>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.AgeRestriction" Title="Age Restriction">
+                                <CellTemplate>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudText>@context.Item.AgeRestriction</MudText>
+                                    </MudStack>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            @* Remember to .include tGenre in the Select * LINQ query *@
+                            <PropertyColumn Property="x => x.Genre.GenreName" Title="Genre">
+                                <CellTemplate>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudText>@(context.Item.Genre?.GenreName ?? "N/A")</MudText>
+                                    </MudStack>
+                                </CellTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.CreatedDate" Title="Added" Format="MMM dd, yyyy HH:mm:ss" />
+                            <TemplateColumn Title="Actions" TextAlignment="TextAlignment.Right">
+                                <CellTemplate>
+                                    <MudStack Row="true" Spacing="0" Class="pa-2">
+                                        <div>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary"
+                                                           Size="Size.Small" Class="mx-1"
+                                                           OnClick="@(() => OpenEditDialog(context.Item))" />
+                                        </div>
+                                        <div>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                                           Size="Size.Small" Class="mx-1"
+                                                           OnClick="@(() => OpenDeleteDialog(context.Item.MovieId))" />
+                                        </div>
+                                    </MudStack>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="Movie" PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                        </PagerContent>
+                    </MudDataGrid>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+    private List<Movie> movies = new();
+    private bool loading = true;
+
+    private string nameSearchString = string.Empty;
+    private string releaseYearSearchInt = string.Empty;
+    private string ageRestrictedSearchString = string.Empty;
+    private string ratingSearchInt = string.Empty;
+
+
+
+    //Load all Rows in table
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMovies();
+    }
+
+    private async Task LoadMovies()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+
+            movies = (await MovieService.GetAllMoviesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load movies!", Severity.Error);
+            Console.WriteLine("An error occured when trying to load movies: " + ex.Message);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+
+
+    //stored procedure to get movies by different parameters
+    private async Task ApplyFilters()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+
+            int filteredYear = int.TryParse(releaseYearSearchInt, out var year) ? year : 0;
+            int filteredrating = int.TryParse(ratingSearchInt, out var rating) ? rating : 0;
+
+            var results = (await MovieService.GetMoviesBy(nameSearchString, filteredYear, ageRestrictedSearchString, filteredrating));
+            movies = results.ToList();
+        }
+        catch(Exception ex)
+        {
+            Snackbar.Add("Failed to load movie!", Severity.Error);
+            Console.WriteLine("An error occured when trying to load movie: " + ex.Message);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        nameSearchString = string.Empty;
+        releaseYearSearchInt = string.Empty;
+        ageRestrictedSearchString = string.Empty;
+        ratingSearchInt = string.Empty;
+
+        await LoadMovies(); // Load all Movies again
+    }
+
+
+    @*  Create Dialog *@
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CRUD___Movies.CreateMovies>("Add New Movie");
+        var result = await dialog.Result;
+
+        if (result != null)
+        {
+            if (!result.Canceled)
+            {
+                await LoadMovies();
+                Snackbar.Add("Movie created successfully", Severity.Success);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Movie not found!", Severity.Error);
+        }
+    }
+
+    @*  Edit Dialog *@
+    private async Task OpenEditDialog(Movie movie)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Movie"] = movie,
+            ["Title"] = $"Edit Movie: {movie.MovieName}"
+        };
+
+        var dialog = await DialogService.ShowAsync<CRUD___Movies.EditMovie>("Edit Movie", parameters);
+        var result = await dialog.Result;
+
+        if (result != null)
+        {
+            if (!result.Canceled)
+            {
+                await LoadMovies();
+                Snackbar.Add("Movie updated successfully", Severity.Success);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Movie not found!", Severity.Error);
+        }
+    }
+
+    @* Delete Dialog  *@
+    private async Task OpenDeleteDialog(int movieId)
+    {
+        var parameters = new DialogParameters
+        {
+            ["MovieId"] = movieId,
+            ["Message"] = "Are you sure you want to delete this movie? This action cannot be undone."
+        };
+
+        var dialog = await DialogService.ShowAsync<CRUD___Movies.DeleteMovieConfirmation>("Confirm Deletion", parameters);
+        var result = await dialog.Result;
+
+        if (result != null)
+        {
+            if (!result.Canceled)
+            {
+                try
+                {
+                    await MovieService.DeleteMovieAsync(movieId);
+                    await LoadMovies();
+                    Snackbar.Add("Movie deleted successfully", Severity.Success);
+                }
+                catch (Exception)
+                {
+                    Snackbar.Add("Failed to delete movie", Severity.Error);
+                }
+            }
+        }
+        else
+        {
+            Snackbar.Add("Movie not found!", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,83 @@
+﻿@using VictorMovies.Components.Domain
+@using VictorMovies.Components.Services
+@* Need to inject any services used as well *@
+@inject IGenreService GenreService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+
+<MudLayout>
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">Edit Genre</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="form" Model="@model">
+                <MudTextField T="string" @bind-Value="model.GenreName" Label="Genre Name" Required="true" RequiredError="Gemre Name is required!" />
+                <MudTextField T="string" @bind-Value="model.LastModifiedBy" Label="Updated By" Required="true" RequiredError="Updated By is required!" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Submit">Edit</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudLayout>
+
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter]
+    public Genre genre { get; set; }
+
+    [Parameter]
+    public string title { get; set; } = String.Empty;
+
+    private MudForm form = default!;
+    private Genre model = new();
+
+    protected override void OnParametersSet()
+    {
+        // Clone the parameter to avoid modifying the original object directly
+        model = new Genre
+        {
+            GenreId = genre.GenreId,
+            GenreName = genre.GenreName,
+            CreatedBy = genre.CreatedBy,
+            CreatedDate = genre.CreatedDate,
+            LastModifiedBy = genre.LastModifiedBy,
+            ModifiedDate = genre.ModifiedDate,
+            IsDeleted = genre.IsDeleted
+        };
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        //Does validation on form
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                await GenreService.UpdateGenreAsync(model);
+                Snackbar.Add("Genre updated successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("Error updating genre", Severity.Error);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Form was not valid.", Severity.Error);
+        }
+    }
+}

@@ -1,0 +1,61 @@
+﻿@using VictorMovies.Components.Domain
+@using VictorMovies.Components.Services
+@* Need to inject any services used as well *@
+@inject IGenreService GenreService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+
+<MudLayout>
+    <MudDialog>
+        <DialogContent>
+            <MudForm @ref="form" Model="@model">
+                <MudTextField T="string" @bind-Value="model.GenreName" Label="Genre Name" Required="true" RequiredError="Genre Name is required!" />
+                <MudTextField T="string" @bind-Value="model.CreatedBy" Label="Created By" Required="true" RequiredError="Created By is required!" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Submit">Create</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudLayout>
+
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private MudForm form = default!;
+    private Genre model = new();
+
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        //Does validation on form
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                await GenreService.CreateGenreAsync(model);
+                Snackbar.Add("Genre created successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("Error creating genre", Severity.Error);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Form was not valid.", Severity.Error);
+        }
+    }
+}

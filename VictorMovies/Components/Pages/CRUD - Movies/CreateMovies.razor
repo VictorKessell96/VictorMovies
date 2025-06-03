@@ -1,0 +1,90 @@
+﻿@using VictorMovies.Components.Domain
+@using VictorMovies.Components.Services
+@* Need to inject any services used as well *@
+@inject IMovieService MovieService
+@inject IGenreService GenreService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+
+<MudLayout>
+    <MudDialog>
+        <DialogContent>
+            <MudForm @ref="form" Model="@model">
+                <MudTextField T="string" @bind-Value="model.MovieName" Label="Movie Name" Required="true" RequiredError="Movie Name is required!" />
+                <MudDatePicker @bind-Date="selectedDate" Label="Year" OpenTo="OpenTo.Year" DateFormat="yyyy"
+                               PickerVariant="PickerVariant.Inline" DisableToolbar="true"
+                               MinDate="new DateTime(1900, 1, 1)" MaxDate="DateTime.Today" />
+                <MudTextField T="string" @bind-Value="model.AgeRestriction" Label="Age Restriction" />
+                <MudRating @bind-SelectedValue="model.Rating" MaxValue="10" />
+                <MudSelect T="int?" Label="Genre" @bind-Value="model.GenreId" Dense="true" Required="true">
+                    <MudSelectItem Value="@(0 as int?)">-- Select Genre --</MudSelectItem>
+                    @foreach (var genre in genres)
+                    {
+                        <MudSelectItem Value="@(genre.GenreId as int?)"> @genre.GenreName </MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" @bind-Value="model.CreatedBy" Label="Created By" Required="true" RequiredError="Created By is required!" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="Cancel">Cancel</MudButton>
+            <MudButton Color="Color.Primary" OnClick="Submit">Create</MudButton>
+        </DialogActions>
+    </MudDialog>
+</MudLayout>
+
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private MudForm form = default!;
+    private Movie model = new();
+
+    private List<Genre> genres = new();
+
+    private DateTime? selectedDate;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        genres = (await GenreService.GetAllGenresAsync()).ToList();
+
+        if (model.YearReleased > 0)
+            selectedDate = new DateTime(model.YearReleased, 1, 1);
+    }
+
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        //Does validation on form
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                if (selectedDate.HasValue)
+                    model.YearReleased = selectedDate.Value.Year;
+
+                await MovieService.CreateMovieAsync(model);
+                Snackbar.Add("Movie created successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("Error creating movie", Severity.Error);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Form was not valid.", Severity.Error);
+        }
+    }
+}
